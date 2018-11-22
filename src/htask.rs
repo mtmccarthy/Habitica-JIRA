@@ -1,29 +1,49 @@
 
 use std::option::{Option};
 
+
 #[derive(Debug, PartialEq)]
-pub struct HTask {
-    htype: HTaskType,
+pub struct HTaskCommon {
     text: String,
     tags: Option<Vec<String>>,
     alias: Option<String>,
-    notes: Option<String>,
-    date: Option<String>,
-    priority: Option<HTaskPriority>,
     reminders: Option<Vec<String>>,
-    frequency: Option<HDailyFrequency>,
-    repeat: Option<HDailyRepeat>,
-    every_x: Option<i32>,
-    streak: Option<i32>,
-    start_date: Option<String>,
-    up: Option<bool>,
-    down: Option<bool>,
-    value: Option<i32>
-
-
 }
 
 #[derive(Debug, PartialEq)]
+pub struct HTaskHabit {
+    common: HTaskCommon,
+    up: bool,
+    down: bool,
+    prior: HTaskPriority
+}
+
+#[derive(Debug, PartialEq)]
+pub struct HTaskDaily {
+    common: HTaskCommon,
+    start_date: String,
+    every_x: i32,
+    streak: i32,
+    repeat: HDailyRepeat,
+    frequency: HDailyFrequency,
+    prior: HTaskPriority
+}
+
+#[derive(Debug, PartialEq)]
+pub struct HTaskTODO {
+    common: HTaskCommon,
+    date: Option<String>,
+    prior: HTaskPriority
+}
+
+#[derive(Debug, PartialEq)]
+pub struct HTaskReward {
+    common: HTaskCommon,
+    value: i32
+}
+
+
+#[derive(Debug, PartialEq, Copy)]
 struct HDailyRepeat {
     su: bool,
     m: bool,
@@ -34,12 +54,8 @@ struct HDailyRepeat {
     s: bool
 }
 
-#[derive(Debug, PartialEq)]
-enum HTaskType {
-    HABIT,
-    DAILY,
-    TODO,
-    REWARD
+impl Clone for HDailyRepeat {
+    fn clone(&self) -> HDailyRepeat{ *self }
 }
 
 #[derive(Debug, PartialEq)]
@@ -61,186 +77,63 @@ enum HTaskPriority {
 #[derive(Debug, PartialEq)]
 enum HDailyFrequency {
     DAILY,
-    _WEEKLY
+    WEEKLY
 }
 
-impl HTask {
-    pub fn get_json<'a>(&self) -> &'a str {
-        r#""#
-    }
-
-    pub fn is_valid(&self) -> bool {
-
-        if &self.htype != &HTaskType::REWARD {
-            match &self.priority {
-                None => return false,
-                _ => ()
-            }
-        }
-
-        match &self.htype {
-            HTaskType::HABIT => {
-
-                let up = &self.up;
-                match up {
-                    None => return false,
-                    _ => ()
-                }
-                let down = &self.down;
-                match down {
-                    None => return false,
-                    _ => ()
-                }
-
-
-                return true;
-            },
-            HTaskType::DAILY => {
-                let start_date = &self.start_date;
-                let every_x = &self.every_x;
-                let streak = &self.streak;
-                let repeat = &self.repeat;
-                let frequency = &self.frequency;
-
-                match start_date {
-                    None => return false,
-                    _ => ()
-                }
-                match every_x {
-                    None => return false,
-                    _ => ()
-                }
-                match streak {
-                    None => return false,
-                    _ => ()
-                }
-                match repeat {
-                    None => return false,
-                    _ => ()
-                }
-                match frequency {
-                    None => return false,
-                    _ => ()
-                }
-
-                return true;
-            },
-            HTaskType::TODO => {
-                return false;
-            },
-            HTaskType::REWARD => false
-        }
-    }
+trait HTask {
+    fn get_json<'a>() -> &'a str;
 }
 
-fn make_habit(up: bool, down: bool, prior: HTaskPriority) -> HTask {
-    return HTask {
-        htype: HTaskType::HABIT,
-        text: String::new(),
+fn make_htask_common(text: &String) -> HTaskCommon{
+    return HTaskCommon {
+        text: text.clone(),
         tags: None,
         alias: None,
-        notes: None,
-        date: None,
-        priority: Some(prior),
-        reminders: None,
-        frequency: None,
-        repeat: None,
-        every_x: None,
-        streak: None,
-        start_date: None,
-        up: Some(up),
-        down: Some(down),
-        value: None
+        reminders: None
     }
 }
 
-fn make_daily(sd: String,
+fn make_habit(text: &String, up: bool, down: bool, prior: HTaskPriority) -> HTaskHabit {
+    return HTaskHabit {
+        common: make_htask_common(text),
+        up,
+        down,
+        prior
+    }
+}
+
+fn make_daily(text: &String,
+              sd: String,
               ex: i32,
               streak: i32,
               rp: HDailyRepeat,
               freq: HDailyFrequency,
               prior: HTaskPriority
-) -> HTask {
-    return HTask {
-        htype: HTaskType::DAILY,
-        text: String::new(),
-        tags: None,
-        alias: None,
-        notes: None,
-        date: None,
-        priority: Some(prior),
-        reminders: None,
-        frequency: Some(freq),
-        repeat: Some(rp),
-        every_x: Some(ex),
-        streak: Some(streak),
-        start_date: Some(sd),
-        up: None,
-        down: None,
-        value: None
+) -> HTaskDaily {
+    return HTaskDaily {
+        common: make_htask_common(text),
+        start_date: sd,
+        every_x: ex,
+        streak,
+        repeat: rp,
+        frequency: freq,
+        prior
     }
 }
 
-fn _make_empty_task() -> HTask {
-    return HTask {
-        htype: HTaskType::DAILY,
-        text: String::new(),
-        tags: None,
-        alias: None,
-        notes: None,
+
+fn make_todo(text:&String, prior: HTaskPriority) -> HTaskTODO {
+    return HTaskTODO{
+        common: make_htask_common(text),
         date: None,
-        priority: None,
-        reminders: None,
-        frequency: None,
-        repeat: None,
-        every_x: None,
-        streak: None,
-        start_date: None,
-        up: None,
-        down: None,
-        value: None
+        prior
     }
 }
 
-fn make_todo() -> HTask {
-    return HTask {
-        htype: HTaskType::TODO,
-        text: String::new(),
-        tags: None,
-        alias: None,
-        notes: None,
-        date: None,
-        priority: None,
-        reminders: None,
-        frequency: None,
-        repeat: None,
-        every_x: None,
-        streak: None,
-        start_date: None,
-        up: None,
-        down: None,
-        value: None
-    }
-}
-
-fn make_reward() -> HTask {
-    return HTask {
-        htype: HTaskType::REWARD,
-        text: String::new(),
-        tags: None,
-        alias: None,
-        notes: None,
-        date: None,
-        priority: None,
-        reminders: None,
-        frequency: None,
-        repeat: None,
-        every_x: None,
-        streak: None,
-        start_date: None,
-        up: None,
-        down: None,
-        value: None
+fn make_reward(text: &String, value: i32) -> HTaskReward {
+    return HTaskReward {
+        common: make_htask_common(text),
+        value
     }
 }
 
@@ -274,49 +167,74 @@ mod tests {
     }
 
     #[test]
-    fn test_htask_is_valid() {
-        let mt_task = _make_empty_task();
-        let habit = make_habit(true, false, HTaskPriority::HARD);
+    fn test_make_tasks() {
+        let text = "Sample".to_string();
+
+        let common = HTaskCommon {
+            text: text.clone(),
+            tags: None,
+            alias: None,
+            reminders: None
+        };
+        assert_eq!(common, make_htask_common(&text));
+
+        let habit = HTaskHabit {
+            common: make_htask_common(&text),
+            up: true,
+            down: false,
+            prior: HTaskPriority::HARD
+        };
+        assert_eq!(habit, make_habit(&text, true, false, HTaskPriority::HARD));
+
+        let start_date = "a start date".to_string();
         let repeat = HDailyRepeat {
             su: false,
             m: true,
             t: false,
-            w: true,
+            w: false,
             th: false,
             f: false,
             s: false
         };
-        let daily = make_daily("asdf".to_string(),
-                               0,
-                               0,
-                               repeat,
-                               HDailyFrequency::DAILY,
-                                HTaskPriority::EASY
-        );
-        let _todo = make_todo();
-        let _reward = make_reward();
+        let weekly_frequency = HDailyFrequency::WEEKLY;
+        assert_ne!(weekly_frequency, HDailyFrequency::DAILY);
+        let daily = HTaskDaily {
+            common: make_htask_common(&text),
+            start_date: start_date.clone(),
+            every_x: 0,
+            streak: 0,
+            repeat: repeat.clone(),
+            frequency: HDailyFrequency::DAILY,
+            prior: HTaskPriority::HARD
+        };
+        assert_eq!(daily,
+                   make_daily(&text,
+                              start_date,
+                              0,
+                              0,
+                              repeat,
+                              HDailyFrequency::DAILY,
+                              HTaskPriority::HARD));
 
-        assert_eq!(HTaskType::HABIT, habit.htype);
-        assert_eq!(String::new(), habit.text);
+        let todo = HTaskTODO {
+            common: make_htask_common(&text),
+            date: None,
+            prior: HTaskPriority::HARD
+        };
 
-        assert_eq!(false, mt_task.is_valid());
-        assert_eq!(true, habit.is_valid());
-        assert_eq!(true, daily.is_valid());
+        assert_eq!(todo, make_todo(&text, HTaskPriority::HARD));
 
+        let reward = HTaskReward {
+            common: make_htask_common(&text),
+            value: 0
+        };
 
-
-
-        //assert_eq!(true, daily.is_valid());
-        //assert_eq!(true, todo.is_valid());
-        //assert_eq!(true, reward.is_valid());
+        assert_eq!(reward, make_reward(&text, 0))
 
     }
 
     #[test]
     fn test_get_json() {
-        let empty_task = _make_empty_task();
-
-        assert_eq!(String::new(), empty_task.get_json())
     }
 
 }
